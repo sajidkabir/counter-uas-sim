@@ -3,6 +3,7 @@
 [![CI](https://github.com/sajidkabir/counter-uas-sim/actions/workflows/ci.yml/badge.svg)](https://github.com/sajidkabir/counter-uas-sim/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23077802.svg)](https://doi.org/10.5281/zenodo.23077802)
 
 A counter-drone (counter-UAS) defence simulator for research and
 education. It plays the full engagement chain end to end: a sensor
@@ -289,6 +290,14 @@ explaining why in the PR.
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+## Citation
+
+If you use this project in research, please cite the archived release:
+
+Sajid Kabir Saji (2026). counter-uas-sim (v1.0.1) [Software]. Zenodo. https://doi.org/10.5281/zenodo.23077803
+
+The concept DOI https://doi.org/10.5281/zenodo.23077802 always resolves to the latest version.
 
 ## License
 
