@@ -152,6 +152,11 @@ def run_engagement(scenario: Scenario) -> EngagementResult:
                    f"TARGET CROSSED the perimeter before intercept, "
                    f"closest approach {intercept.miss_distance_m:.1f} m")
         outcome = "intercept_failed"
+    elif intercept.outcome == "energy_exhausted":
+        log.append(f"t={launch_time + intercept.flight_time_s:6.1f} s  "
+                   f"ENERGY EXHAUSTED, no intercept, closest approach "
+                   f"{intercept.miss_distance_m:.1f} m")
+        outcome = "intercept_failed"
     else:
         log.append(f"t={launch_time + intercept.flight_time_s:6.1f} s  "
                    f"NO INTERCEPT, closest approach "

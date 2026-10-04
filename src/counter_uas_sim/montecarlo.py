@@ -74,8 +74,14 @@ class MonteCarloResult:
 
 
 def run_monte_carlo(runs: int = 200, seed: int = 42,
-                    guidance: str = "pn") -> MonteCarloResult:
-    """Run ``runs`` seeded engagements and aggregate the outcomes."""
+                    guidance: str = "pn",
+                    endurance_s: float = 60.0) -> MonteCarloResult:
+    """Run ``runs`` seeded engagements and aggregate the outcomes.
+
+    ``endurance_s`` is the interceptor energy budget applied to every
+    run (see ``InterceptorSpec``); the default matches the spec
+    default.
+    """
     master = np.random.default_rng(seed)
     launches = 0
     intercepts = 0
@@ -85,6 +91,7 @@ def run_monte_carlo(runs: int = 200, seed: int = 42,
         run_seed = int(master.integers(0, 2 ** 31 - 1))
         scenario = random_scenario(master, run_seed)
         scenario.guidance = guidance
+        scenario.interceptor.endurance_s = endurance_s
         result = run_engagement(scenario)
         if result.launch_time_s is not None:
             launches += 1

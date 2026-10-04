@@ -26,7 +26,13 @@ Two guidance laws are provided so they can be compared honestly:
   baseline PN has to beat.
 
 ``run_intercept`` integrates one engagement against a ground-truth
-target model with semi-implicit Euler steps at a fixed dt.
+target model with semi-implicit Euler steps at a fixed dt. The
+interceptor also carries an energy budget (``InterceptorSpec.endurance_s``,
+default 60 s of guided flight): when the budget is spent the attempt
+ends with outcome ``energy_exhausted``. This makes guidance
+comparisons price flight time honestly: a law that only wins by
+spiraling after the target for two minutes loses when the motor
+would have burned out at one.
 """
 
 from __future__ import annotations
@@ -43,6 +49,16 @@ class InterceptorSpec:
     capture_radius_m: float = 15.0
     navigation_constant: float = 4.0
     launch_speed_mps: float = 55.0
+    endurance_s: float = 60.0
+    """Energy budget in seconds of guided flight.
+
+    When the budget is spent the attempt ends with outcome
+    ``energy_exhausted``; the model does not coast the interceptor
+    ballistically after burnout, it scores the attempt as failed. The
+    default of 60 s is a placeholder parameter, set it per platform
+    from motor or battery data when you have it. Use
+    ``float("inf")`` for the old unlimited-endurance behavior.
+    """
 
 
 def _clamp_accel(accel: np.ndarray, spec: InterceptorSpec) -> np.ndarray:
@@ -137,6 +153,9 @@ def run_intercept(target, launch_position, t_start: float,
             if float(np.linalg.norm(tgt_pos - protected)) <= perimeter_radius_m:
                 return InterceptResult(False, min_range, None, t - t_start,
                                        max_speed, "target_reached_perimeter")
+        if t - t_start >= spec.endurance_s:
+            return InterceptResult(False, min_range, None, t - t_start,
+                                   max_speed, "energy_exhausted")
         if guidance == "pn":
             accel = pn_acceleration(pos, vel, tgt_pos, tgt_vel, spec)
         elif guidance == "pure_pursuit":

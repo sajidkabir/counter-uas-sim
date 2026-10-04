@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-10-04
+
+Guidance comparisons now price flight time honestly.
+
+### Added
+
+- Interceptor energy budget (`InterceptorSpec.endurance_s`, default
+  60 s): when the budget is spent the attempt ends with outcome
+  `energy_exhausted`. The default is a placeholder parameter; set it
+  per platform from motor or battery data. Use `float("inf")` for the
+  old unlimited-endurance behavior.
+- `ENERGY EXHAUSTED` event-log entry and `intercept_failed` mapping in
+  the engagement runner.
+- `--endurance` option on the `run` and `montecarlo` CLI subcommands,
+  and an `endurance_s` parameter on `run_monte_carlo`.
+- 7 new tests (26 total): budget exhaustion, unlimited-endurance
+  recovery, monotonic intercepts under shorter budgets, the pursuit
+  chase effect, the budgeted guidance comparison, log surfacing, and
+  reproducibility.
+
+### Changed
+
+- With the default 60 s budget, the seed-42 Monte Carlo reference
+  numbers move: PN 136 of 200 intercepts (was 159), pure pursuit 132
+  of 200 (was 175); mean miss distance 244.6 m (was 104.1 m). The
+  budgeted comparison favors PN's fast collision courses over
+  pursuit's long chases, and the README documents both the budgeted
+  and the unlimited-budget numbers.
+
 ## [1.0.0] - 2026-10-01
 
 First stable release.

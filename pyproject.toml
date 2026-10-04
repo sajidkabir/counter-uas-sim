@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "counter-uas-sim"
-version = "1.0.0"
+version = "1.1.0"
 description = "Counter-UAS defence simulation for research and education: detection, tracking, threat assessment, and low-cost interceptor engagement analysis"
 readme = "README.md"
 license = { text = "MIT" }

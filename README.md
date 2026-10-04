@@ -49,6 +49,8 @@ not to design or operate a weapon.
 - **Guidance**: proportional navigation (PN) for a kinematic
   interceptor with hard speed and acceleration limits and a capture
   radius, plus a pure-pursuit baseline flown under identical limits.
+  An energy budget (default 60 s of guided flight) ends long chases,
+  so the two laws are compared with flight time priced in.
 - **End-to-end engagements**: detect, track, assess, launch, guide,
   outcome, returned with a timestamped event log.
 - **Monte Carlo analysis**: randomized intruders (range, bearing, aim
@@ -89,6 +91,7 @@ counter-uas run
 ```text
 Counter-UAS engagement simulation
   Guidance:        pn
+  Endurance:       60 s
 
   t=   3.0 s  DETECTED at range 3,965 m
   t=   6.0 s  TRACK ESTABLISHED, position std 20.6 m
@@ -110,21 +113,22 @@ counter-uas montecarlo --runs 200
 Counter-UAS Monte Carlo summary
   Runs:                    200
   Guidance:                pn
+  Endurance:               60 s
   Seed:                    42
   Launches:                175
-  Intercepts:              159
-  Intercept probability:   0.795
-  Mean miss distance:      104.1 m
+  Intercepts:              136
+  Intercept probability:   0.680
+  Mean miss distance:      244.6 m
 
   Cost per successful intercept (reported estimates):
-    Low-cost interceptor (USD 500 per unit):  USD 550
-    Missile-defence interceptor (about USD 50,000 per missile):  USD 55,031
+    Low-cost interceptor (USD 500 per unit):  USD 643
+    Missile-defence interceptor (about USD 50,000 per missile):  USD 64,338
 ```
 
 One interceptor is expended per launch in both systems, so the
 100-to-1 unit price gap survives the division almost intact: a
-successful intercept costs USD 550 of low-cost interceptors against
-USD 55,031 of missile-defence interceptors at the same success rate.
+successful intercept costs USD 643 of low-cost interceptors against
+USD 64,338 of missile-defence interceptors at the same success rate.
 
 Compare guidance laws on the same seed:
 
@@ -158,7 +162,7 @@ for line in result.event_log:
 | `sensors.py` | Detection probability, measurement noise, update rate |
 | `tracking.py` | Constant-velocity Kalman filter and track quality |
 | `assessment.py` | Threat score and the engagement recommendation |
-| `guidance.py` | Proportional navigation and pure pursuit, interceptor limits |
+| `guidance.py` | Proportional navigation and pure pursuit, interceptor limits, energy budget |
 | `engagement.py` | The full detect-track-assess-launch-guide chain |
 | `montecarlo.py` | Seeded randomized runs and the cost comparison |
 | `cli.py` | Command-line interface |
@@ -181,13 +185,20 @@ Key relations:
   (40 m/s2). The interceptor leaves the launcher at 55 m/s toward the
   target and can never exceed 70 m/s. Closing within the 15 m capture
   radius counts as an intercept.
+- Energy budget: the interceptor has 60 s of guided flight by default
+  (a placeholder parameter, set it per platform from motor or battery
+  data). When the budget is spent the attempt ends with outcome
+  `energy_exhausted`; the model does not coast the interceptor
+  ballistically after burnout. Override with `--endurance` on the CLI
+  or `InterceptorSpec(endurance_s=...)`, and use `float("inf")` for
+  the old unlimited-endurance behavior.
 - Cost per successful intercept: unit cost * launches / intercepts,
   computed identically for both price points so the comparison is
   apples to apples.
 
 ## Validation and sanity checks
 
-The test suite (19 tests) checks the physics and the logic, not just
+The test suite (26 tests) checks the physics and the logic, not just
 the plumbing:
 
 - Target models reproduce textbook values exactly: a full constant-rate
@@ -204,22 +215,28 @@ the plumbing:
 - PN intercepts a constant-velocity target inside the capture radius,
   beats pure pursuit's miss distance on a crossing target, and the
   interceptor never exceeds its speed limit under either law.
+- The energy budget ends long chases with an `energy_exhausted`
+  outcome, and a shorter budget can only reduce intercepts, never add
+  them.
 - No engagement in the chain can intercept before detection: the event
   log order and timestamps are asserted.
 - Monte Carlo with a fixed seed returns identical results on repeat
   runs, field for field.
 
 One Monte Carlo finding worth stating honestly, because it shapes the
-roadmap: split the seed-42 runs by target type and the two guidance
-laws trade places. Against straight-line intruders both laws intercept
-every launched engagement, but PN gets there faster (mean flight
-35.7 s against 39.5 s). Against continuously maneuvering intruders
-launched on at long range, pure pursuit eventually spirals in (41 of
-41, mean flight 89.3 s) while PN's collision course keeps being
-invalidated by the turn (25 of 41). The model gives the interceptor
-unlimited endurance, which flatters pursuit; a real low-cost
-interceptor would run out of energy on those long chases. Both effects
-are visible in the numbers, and neither is hidden.
+roadmap: the guidance comparison depends on whether flight time is
+priced. With the default 60 s energy budget, PN intercepts 136 of 200
+seed-42 runs against 132 for pure pursuit. Split by target type:
+against straight-line intruders PN intercepts every launched
+engagement (134 of 134, mean flight 35.7 s) while pursuit loses two
+long chases (132 of 134, mean flight 39.2 s). Against continuously
+maneuvering intruders both laws mostly fail now, PN 2 of 41 and
+pursuit 0 of 41, because the long spiraling chases that used to end
+in intercepts now end at energy exhaustion. Lift the budget back to
+unlimited and the old picture returns (PN 159, pursuit 175): pursuit
+wins only by chasing for over a minute, which is exactly what the
+endurance parameter is there to price honestly. Both effects are
+visible in the numbers, and neither is hidden.
 
 ## Honest limitations
 
@@ -228,8 +245,11 @@ are visible in the numbers, and neither is hidden.
 - After launch, the interceptor flies against ground truth, standing in
   for an onboard terminal seeker. The ground tracker cues the launch;
   its accuracy is measured where it matters, at the decision.
-- The interceptor has no energy or endurance limit, which (as the
-  validation section shows) flatters pure pursuit on long chases.
+- The interceptor's energy budget defaults to 60 s of guided flight,
+  a placeholder parameter to be set per platform from motor or battery
+  data. When the budget is spent the attempt ends immediately with
+  outcome `energy_exhausted`; the model does not coast the interceptor
+  ballistically after burnout.
 - The threat score uses instantaneous velocity. A maneuvering target
   can look committed and then turn away, which is the main source of
   failed engagements in the Monte Carlo mix.
@@ -248,8 +268,6 @@ Ideas are welcome. Roughly in order of expected value:
   feed-forward of target lateral acceleration, and launch-commit logic
   that accounts for target turn rate, aimed squarely at the Monte
   Carlo weakness documented above.
-- **Interceptor endurance**: an energy budget that ends long chases,
-  so guidance comparisons price flight time honestly.
 - **3D engagement geometry**: altitude, diving profiles out of the
   plane, and a sensor model with elevation coverage.
 - **Seeker-based terminal phase**: fly the endgame on noisy seeker

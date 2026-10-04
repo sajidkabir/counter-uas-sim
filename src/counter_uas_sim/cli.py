@@ -11,11 +11,13 @@ from .montecarlo import run_monte_carlo
 def _cmd_run(args) -> int:
     scenario = default_scenario()
     scenario.guidance = args.guidance
+    scenario.interceptor.endurance_s = args.endurance
     scenario.seed = args.seed
     result = run_engagement(scenario)
 
     print("Counter-UAS engagement simulation")
     print(f"  Guidance:        {args.guidance}")
+    print(f"  Endurance:       {args.endurance:.0f} s")
     print()
     for line in result.event_log:
         print(f"  {line}")
@@ -30,11 +32,13 @@ def _cmd_run(args) -> int:
 
 def _cmd_montecarlo(args) -> int:
     result = run_monte_carlo(runs=args.runs, seed=args.seed,
-                              guidance=args.guidance)
+                             guidance=args.guidance,
+                             endurance_s=args.endurance)
 
     print("Counter-UAS Monte Carlo summary")
     print(f"  Runs:                    {result.runs}")
     print(f"  Guidance:                {args.guidance}")
+    print(f"  Endurance:               {args.endurance:.0f} s")
     print(f"  Seed:                    {args.seed}")
     print(f"  Launches:                {result.launches}")
     print(f"  Intercepts:              {result.intercepts}")
@@ -59,6 +63,9 @@ def main(argv=None) -> int:
     run_parser = sub.add_parser("run", help="Run one demo engagement")
     run_parser.add_argument("--guidance", choices=["pn", "pure_pursuit"],
                             default="pn")
+    run_parser.add_argument("--endurance", type=float, default=60.0,
+                            help="interceptor energy budget in seconds of "
+                                 "guided flight")
     run_parser.add_argument("--seed", type=int, default=7)
     run_parser.set_defaults(func=_cmd_run)
 
@@ -68,6 +75,9 @@ def main(argv=None) -> int:
     mc_parser.add_argument("--seed", type=int, default=42)
     mc_parser.add_argument("--guidance", choices=["pn", "pure_pursuit"],
                            default="pn")
+    mc_parser.add_argument("--endurance", type=float, default=60.0,
+                           help="interceptor energy budget in seconds of "
+                                "guided flight")
     mc_parser.set_defaults(func=_cmd_montecarlo)
 
     args = parser.parse_args(argv)
