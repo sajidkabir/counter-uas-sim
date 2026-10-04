@@ -125,7 +125,8 @@ def run_intercept(target, launch_position, t_start: float,
     The interceptor leaves the launch position at the spec's launch
     speed, aimed at the target's position at ``t_start``. Integration
     stops on intercept, on the target crossing the protected perimeter
-    (when a perimeter is given), or at ``max_duration_s``.
+    (when a perimeter is given), when the energy budget
+    (``spec.endurance_s``) is spent, or at ``max_duration_s``.
     """
     pos = np.asarray(launch_position, dtype=float).copy()
     protected = np.asarray(protected_point, dtype=float)
